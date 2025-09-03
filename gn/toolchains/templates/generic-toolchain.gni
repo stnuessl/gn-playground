@@ -1,0 +1,152 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+template("generic_toolchain") {
+  assert(defined(invoker.cpp_flags), "'cpp_flags' must be specified'")
+  assert(defined(invoker.asm), "'asm' must be specified'")
+  assert(defined(invoker.cc), "'cc' must be specified'")
+  assert(defined(invoker.cxx), "'cxx' must be specified'")
+  assert(defined(invoker.ar), "'ar' must be specified'")
+  assert(defined(invoker.ld), "'ld' must be specified'")
+  assert(defined(invoker.cp), "'cp' must be specified'")
+  assert(defined(invoker.alink_output_extension),
+         "'alink_output_extension' must be specified'")
+
+  toolchain(target_name) {
+    _ignore = [
+      "alink_output_extension",
+      "append_cflags",
+      "ar",
+      "asm_launcher",
+      "cc_launcher",
+      "cxx_launcher",
+      "asm",
+      "cc",
+      "cp",
+      "cxx",
+      "ld",
+      "prepend_cflags",
+    ]
+
+    forward_variables_from(invoker, "*", _ignore)
+
+    object =
+        "{{source_out_dir}}/_{{target_output_name}}_/{{source_name_part}}.o"
+
+    tool("asm") {
+      asm_flags = "$cpp_flags {{asmflags}}"
+
+      if (defined(invoker.asm_launcher)) {
+        command_launcher = invoker.asm_launcher
+      }
+
+      command = "${invoker.asm} $asm_flags -o {{output}} -c {{source}}"
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      description = "AS {{source}}"
+      outputs = [ "$object" ]
+    }
+
+    tool("cc") {
+      cc_flags_list = []
+
+      if (defined(invoker.prepend_cflags)) {
+        cc_flags_list += invoker.prepend_cflags
+      }
+
+      cc_flags_list += [
+        "$cpp_flags",
+        "{{cflags}}",
+        "{{cflags_c}}",
+      ]
+
+      if (defined(invoker.append_cflags)) {
+        cc_flags_list += invoker.append_cflags
+      }
+
+      cc_flags = string_join(" ", cc_flags_list)
+
+      if (defined(invoker.cc_launcher)) {
+        command_launcher = invoker.cc_launcher
+      }
+
+      command = "${invoker.cc} $cc_flags -o {{output}} -c {{source}}"
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      description = "CC {{source}}"
+      outputs = [ "$object" ]
+    }
+
+    tool("cxx") {
+      cxx_flags_list = []
+
+      if (defined(invoker.prepend_cflags)) {
+        cxx_flags_list += invoker.prepend_cflags
+      }
+
+      cxx_flags_list += [
+        "$cpp_flags",
+        "{{cflags}}",
+        "{{cflags_cc}}",
+      ]
+
+      if (defined(invoker.append_cflags)) {
+        cxx_flags_list += invoker.append_cflags
+      }
+
+      cxx_flags = string_join(" ", cxx_flags_list)
+
+      if (defined(invoker.cxx_launcher)) {
+        command_launcher = invoker.cxx_launcher
+      }
+
+      command = "${invoker.cxx} $cxx_flags -o {{output}} -c {{source}}"
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      description = "CXX {{source}}"
+      outputs = [ "$object" ]
+    }
+
+    tool("alink") {
+      command = "${invoker.ar} {{output}} {{inputs}}"
+      description = "ARCHIVE {{output}}"
+      outputs =
+          [ "{{target_out_dir}}/{{target_output_name}}{{output_extension}}" ]
+      default_output_extension = invoker.alink_output_extension
+    }
+
+    tool("link") {
+      default_output_dir = "{{target_out_dir}}"
+      ld_args = "-Wl,--start-group {{inputs}} {{solibs}} -Wl,--end-group"
+      command = "${invoker.ld} {{ldflags}} -o {{output}} ${ld_args} {{libs}}"
+      description = "LINK {{output}}"
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
+    }
+
+    tool("copy") {
+      command = "${invoker.cp} {{source}} {{output}}"
+      description = "COPY {{source}} {{output}}"
+    }
+  }
+}

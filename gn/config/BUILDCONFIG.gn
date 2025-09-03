@@ -1,0 +1,43 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+set_default_toolchain("//gn/toolchains/clang")
+
+declare_args() {
+  # Additional tool paths
+  ccache_tool = "/usr/bin/ccache"
+  clang_format_tool = "/usr/bin/clang-format"
+  clang_scan_deps_tool = "/usr/bin/clang-scan-deps"
+  clang_tidy_tool = "/usr/bin/clang-tidy"
+  ninja_tool = "/usr/bin/ninja"
+  gn_tool = "/usr/bin/gn"
+  uv_tool = "/usr/bin/uv"
+  ccache_tool = "/usr/bin/ccache"
+
+  is_ci_env = getenv("CI") == "true"
+}
+
+is_linux = host_os == "linux"
+is_mac = host_os == "mac"
+is_win = host_os == "win"

@@ -1,0 +1,55 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2026  Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+declare_args() {
+  # ccache cache directory
+  ccache_directory = rebase_path("//.cache/ccache", root_build_dir)
+
+  # ccache shared remote storage backend
+  ccache_remote_storage = ""
+}
+
+_invocation = []
+if (ccache_tool != "") {
+  _invocation += [
+    ccache_tool,
+    "cache_dir=$ccache_directory",
+    "compiler_check=mtime",
+    "compiler_type=auto",
+    "depend_mode=true",
+    "direct_mode=true",
+    "hash_dir=false",
+
+    #"compression=true",
+    #"compression_level=0",
+    #"debug=false",
+    #"inode_cache=true",
+  ]
+
+  if (ccache_remote_storage != "") {
+    _invocation += [ "remote_storage=$ccache_remote_storage" ]
+  }
+}
+
+ccache_invocation = string_join(" ", _invocation)

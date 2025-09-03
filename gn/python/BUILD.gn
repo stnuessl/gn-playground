@@ -1,0 +1,96 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/python/python.gni")
+import("//gn/vars.gni")
+
+group("check") {
+  testonly = true
+  deps = [
+    ":path-check",
+    ":ruff-check",
+    ":ruff-format-check",
+  ]
+}
+
+python("path-check") {
+  testonly = true
+  deps = [ description_target ]
+  inputs = description_outputs
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+  mnemonic = "CHECK"
+
+  env = [ "PYTHONPATH=" + rebase_path("//gn/python/packages", root_build_dir) ]
+
+  script = "//gn/python/check-paths.py"
+  args = [
+    "--description",
+    rebase_path(description_outputs[0], root_build_dir),
+  ]
+}
+
+# Avoid race conditions on the cache.
+pool("ruff") {
+  depth = 1
+}
+
+action("ruff-format-check") {
+  testonly = true
+  inputs = [ "//.ruff.toml" ]
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+  mnemonic = "CHECK"
+  pool = ":ruff"
+
+  script = uv_tool
+  args = [
+    "run",
+    "--directory",
+    rebase_path("//", root_build_dir),
+    "ruff",
+    "--config",
+    rebase_path(inputs[0], "//"),
+    "format",
+    "--check",
+    "--diff",
+  ]
+}
+
+action("ruff-check") {
+  testonly = true
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+  inputs = [ "//.ruff.toml" ]
+  mnemonic = "CHECK"
+  pool = ":ruff"
+
+  script = uv_tool
+  args = [
+    "run",
+    "--directory",
+    rebase_path("//", root_build_dir),
+    "ruff",
+    "--config",
+    rebase_path(inputs[0], "//"),
+    "check",
+  ]
+}

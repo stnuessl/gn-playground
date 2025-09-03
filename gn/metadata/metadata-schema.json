@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "target",
+      "type",
+      "template",
+      "testonly"
+    ],
+    "properties": {
+      "target": {
+        "type": "string",
+        "pattern": "^//.+"
+      },
+      "component": {
+        "type": "string",
+        "minLength": 1
+      },
+      "source": {
+        "type": "string",
+        "minLength": 1,
+        "format": "uri-reference"
+      },
+      "template": {
+        "type": "string",
+        "enum": [
+          "binary",
+          "component",
+          "unittest"
+        ]
+      },
+      "testonly": {
+          "type": "boolean"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "executable",
+          "source_set",
+          "static_library",
+          "dynamic_library"
+        ]
+      },
+      "validates": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "template": {
+              "const": "unittest"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "validates"
+          ],
+          "properties": {
+            "validates": {
+              "type": "string",
+              "minLength": 1,
+              "format": "uri-reference"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "template": {
+              "enum": [
+                "binary",
+                "component"
+              ]
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "component"
+          ]
+        }
+      }
+    ]
+  }
+}

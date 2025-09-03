@@ -1,0 +1,17 @@
+buildconfig = "//gn/config/BUILDCONFIG.gn"
+
+script_executable = ""
+
+export_compile_commands = [
+    "//:compile-commands",
+]
+
+exec_script_allowlist = [
+  "//BUILD.gn",
+  "//gn/import/utils.gni",
+]
+
+no_stamp_files = true
+
+default_args = {
+}

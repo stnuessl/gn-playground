@@ -1,0 +1,83 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/actions/python-action.gni")
+
+#
+# Install executables / binaries to a specified output directory.
+# This action intentionally tricks gn's output directory checking so files
+# can be moved to almost anywhere.
+#
+template("install") {
+  assert(defined(invoker.deps), "'deps' must be specified")
+  assert(defined(invoker.dest), "'dest' must be specified")
+
+  group_deps = []
+
+  foreach(dep, invoker.deps) {
+    # Be aware that the below path is highly dependant on what is defined
+    # within a given toolchain.
+    out_dir = get_label_info(dep, "target_out_dir")
+    name = get_label_info(dep, "name")
+    source = "${out_dir}/${name}"
+
+    # Make sure to construct a unique name
+    action_name = rebase_path(source, "//")
+    action_name = string_replace(action_name, "/", "_")
+    action_name = "install-${action_name}"
+
+    group_deps += [ ":${action_name}" ]
+
+    python_action(action_name) {
+      ignore = [
+        "dest",
+        "deps",
+      ]
+
+      forward_variables_from(invoker, "*", ignore)
+
+      inputs = [ source ]
+      destination = "${invoker.dest}/${name}"
+
+      output = "${target_out_dir}/tags/${name}.ack"
+
+      script = "//gn/scripts/copy.py"
+      args = [ "--source" ]
+      args += [ rebase_path(source) ]
+      args += [
+        "--destination",
+        rebase_path(destination),
+        "--with-ack",
+        rebase_path(output),
+      ]
+
+      outputs = [ output ]
+      deps = [ "${dep}" ]
+    }
+  }
+
+  group(target_name) {
+    deps = group_deps
+  }
+}

@@ -1,0 +1,20 @@
+---
+Checks:          'clang-diagnostic-*,bugprone-*,readability-*'
+WarningsAsErrors: "-*"
+HeaderFileExtensions:
+  - ''
+  - h
+  - hh
+  - hpp
+  - hxx
+ImplementationFileExtensions:
+  - c
+  - cc
+  - cpp
+  - cxx
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: ''
+FormatStyle:     none
+SystemHeaders:   false
+...
+

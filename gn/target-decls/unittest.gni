@@ -1,0 +1,194 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/clang-tidy/clang-tidy.gni")
+import("//gn/python/python-module.gni")
+import("//gn/target-decls/printf-action.gni")
+
+declare_args() {
+  unittest_toolchain = ""
+  unittest_launcher = ""
+}
+
+template("unittest") {
+  assert(defined(invoker.source), "'source' must be defined")
+
+  _prefix = "unittest"
+  executable_name = "$_prefix-$target_name"
+  testonly = true
+
+  executable(executable_name) {
+    check_includes = false
+
+    _ignore = [
+      "check_includes",
+      "cflags",
+      "clfags_c",
+      "clfags_cc",
+      "defines",
+      "libs",
+      "source",
+      "sources",
+      "testonly",
+      "tests",
+      "line_coverage",
+      "branch_coverage",
+      "testonly",
+    ]
+
+    forward_variables_from(invoker, "*", _ignore)
+
+    sources = [ invoker.source ] + invoker.tests
+
+    defines = [ "UNITTEST" ]
+    cflags = [
+      "-pedantic",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fno-omit-frame-pointer",
+      "-Og",
+      "-g2",
+    ]
+
+    cflags_c = [
+      "-std=c11",
+      "-fprofile-arcs",
+      "-ftest-coverage",
+    ]
+    cflags_cc = [ "-std=c++17" ]
+    libs = [
+      "gtest",
+      "gcov",
+    ]
+    ldflags = [ "-coverage" ]
+
+    metadata = {
+      template = [ "unittest" ]
+      unittest = [ rebase_path(invoker.source) ]
+    }
+  }
+
+  clang_tidy(executable_name) {
+    sources = invoker.tests
+  }
+
+  execute_action_name = "$_prefix-execute-$target_name"
+  action(execute_action_name) {
+    inputs = [ "$target_out_dir/$executable_name" ]
+    deps = [ ":$executable_name" ]
+    mnemonic = "RUN"
+
+    # Ensure that this action is always run when invoked.
+    outputs = [
+      "$target_out_dir/$target_name-output.json",
+      "$target_out_dir/$target_name-output.non-existant",
+    ]
+
+    if (unittest_launcher != "") {
+      script = unittest_launcher
+      args = [ rebase_path(inputs[0]) ]
+    } else {
+      script = inputs[0]
+      args = []
+    }
+
+    args += [
+      "--gtest_shuffle",
+      "--gtest_output=json:" + rebase_path(outputs[0]),
+    ]
+  }
+
+  coverage_action_name = "$_prefix-coverage-$target_name"
+  python_module(coverage_action_name) {
+    testonly = true
+    inputs = get_target_outputs(":$execute_action_name")
+    outputs = [ "$target_out_dir/$coverage_action_name.html" ]
+    deps = [ ":$execute_action_name" ]
+    mnemonic = "COVERAGE"
+
+    if (defined(invoker.line_coverage)) {
+      line_coverage = invoker.line_coverage
+    } else {
+      line_coverage = "100"
+    }
+
+    if (defined(invoker.branch_coverage)) {
+      branch_coverage = invoker.branch_coverage
+    } else {
+      branch_coverage = "100"
+    }
+
+    object_out_dir = get_path_info(invoker.source, "out_dir")
+
+    module = "gcovr"
+    args = [
+      "--gcov-executable",
+      "llvm-cov gcov",
+      "--root",
+      rebase_path("//."),
+      "-j",
+      "1",
+      "--filter",
+      string_replace(rebase_path(invoker.source), ".", "\."),
+      "--fail-under-line",
+      line_coverage,
+      "--fail-under-branch",
+      branch_coverage,
+      "--html",
+      rebase_path(outputs[0]),
+      "--html-details",
+      "--html-title",
+      "GCC Code Coverage Report - " + get_path_info(invoker.source, "file"),
+      "--delete",
+      rebase_path(object_out_dir),
+    ]
+  }
+
+  output_action_name = "$_prefix-info-$target_name"
+  printf_action(output_action_name) {
+    deps = [ ":$coverage_action_name" ]
+    inputs = get_target_outputs(deps[0])
+    outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+    args = [
+      "Coverage Report: %s\n",
+      rebase_path(inputs[0]),
+    ]
+    mnemonic = "INFO"
+  }
+
+  group_name = "$_prefix-file-$target_name"
+  group(group_name) {
+    deps = [ ":${output_action_name}($unittest_toolchain)" ]
+  }
+
+  foreach(source, invoker.tests) {
+
+  }
+  # FIXME: we need multiple groups: one for the test file and one for the unit
+  # under test which will allow us to easily launch these unittests.
+  # The groups should contain the unittest-specific toolchain to hide it away.
+  # Also we need to make sure that the exported compile commands are always
+  # aligned for usage with clang....
+}

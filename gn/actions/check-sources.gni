@@ -1,0 +1,189 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/actions/capture-output.gni")
+import("//gn/actions/python-action.gni")
+
+declare_args() {
+    ninja_tool = "/usr/bin/ninja"
+    gn_tool = "/usr/bin/gn"
+}
+
+template("metadata") {
+  #
+  # Use gn to generate a description of the requested targets.
+  #
+  assert(defined(invoker.targets), "'target' not defined")
+  assert(defined(invoker.deps), "'deps' not defined")
+
+  target_deps = []
+  target_inputs = []
+
+  foreach(target, invoker.targets) {
+    name = get_label_info(target, "name")
+    toolchain = get_label_info(target, "toolchain")
+    toolchain = get_label_info(toolchain, "name")
+
+    name = string_replace(name, "*", "_all_")
+
+    capture_name = "${name}-${toolchain}-description"
+    capture_output = "${target_out_dir}/intermediate/${capture_name}.json"
+
+    target_deps += [ ":${capture_name}" ]
+
+    target_inputs += [ capture_output ]
+
+    capture_output(capture_name) {
+      variables = [ "deps" ]
+
+      forward_variables_from(invoker, variables)
+      testonly = true
+
+      script = gn_tool
+      stdout = capture_output
+      args = [
+        "desc",
+        rebase_path(root_build_dir),
+        "--format=json",
+        target,
+      ]
+
+      outputs = [ capture_output ]
+    }
+  }
+
+  #
+  # Convert the description from a target-oriented format to a
+  # file-oriented format.
+  #
+  assert(defined(invoker.output), "'output' not defined")
+
+  python_action(target_name) {
+    ignore = [
+      "args",
+      "deps",
+      "inputs",
+      "output",
+      "outputs",
+      "script",
+      "testonly",
+    ]
+
+    forward_variables_from(invoker, "*", ignore)
+    testonly = true
+    inputs = target_inputs
+
+    script = "//gn/scripts/convert-gndesc.py"
+    args = [
+             "--root",
+             rebase_path("."),
+             "-o",
+             rebase_path(invoker.output),
+           ] + rebase_path(inputs)
+
+    deps = target_deps
+    outputs = [ invoker.output ]
+  }
+}
+
+template("ninja_deps") {
+  capture_output(target_name) {
+    ignore = [
+      "output",
+      "testonly",
+    ]
+
+    forward_variables_from(invoker, "*", ignore)
+    testonly = true
+    script = ninja_tool
+    args = [
+      "-C",
+      rebase_path("${root_build_dir}"),
+      "-t",
+      "deps",
+    ]
+
+    stdout = invoker.output
+  }
+}
+
+template("check_sources") {
+  metadata_target = "${target_name}-metadata"
+
+  metadata(metadata_target) {
+    forward_variables_from(invoker,
+                           [
+                             "targets",
+                             "deps",
+                           ])
+    testonly = true
+
+    output = "${target_out_dir}/intermediate/${target_name}-metadata.json"
+  }
+
+  deps_target = "${target_name}-deps"
+
+  ninja_deps(deps_target) {
+    forward_variables_from(invoker, [ "deps" ])
+    testonly = true
+
+    output = "${target_out_dir}/intermediate/${target_name}-deps.txt"
+  }
+
+  dep2j_target = "${target_name}-dep2j"
+  python_action(dep2j_target) {
+    testonly = true
+    script = "//gn/scripts/dep2j.py"
+    output = "${target_out_dir}/${target_name}-deps.json"
+
+    args = [
+             "-o",
+             rebase_path(output),
+           ] + rebase_path(get_target_outputs(":${deps_target}"))
+
+    deps = [ ":${deps_target}" ]
+    outputs = [ output ]
+  }
+
+  python_action(target_name) {
+    testonly = true
+    script = "//gn/scripts/check-sources.py"
+
+    args = [ "--deps" ] + rebase_path(get_target_outputs(":${dep2j_target}")) +
+           [ "--description" ] +
+           rebase_path(get_target_outputs(":${metadata_target}")) +
+           [
+             "--skip",
+             "/usr/include/*",
+             "/usr/lib/*",
+           ]
+
+    deps = [
+      ":${dep2j_target}",
+      ":${metadata_target}",
+    ]
+
+    outputs = [ "${target_out_dir}/${target_name}-non-existant" ]
+  }
+}

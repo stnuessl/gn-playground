@@ -1,0 +1,130 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+declare_args() {
+    gcovr_tool = "/usr/bin/gcovr"
+    unittest_launcher = ""
+}
+
+template("unittest") {
+    output_name =  target_name
+    testonly = true
+
+    executable(target_name) {
+        assert(defined(invoker.source), "'source' must be defined")
+
+        ignore = [
+            "cflags",
+            "clfags_c",
+            "clfags_cc",
+            "libs",
+            "source",
+            "sources",
+            "testonly",
+            "headers",
+            "tests",
+        ]
+
+        forward_variables_from(invoker, "*", ignore)
+
+        sources = [ invoker.source ]
+        sources += invoker.tests
+
+        if (defined(invoker.headers)) {
+            sources += invoker.headers
+        }
+
+        cflags = [
+            "-pedantic",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-fno-omit-frame-pointer",
+            "-Og",
+            "-g2"
+        ]
+
+        cflags_c = [
+            "-fprofile-arcs",
+            "-ftest-coverage",
+        ]
+        libs = [
+            "gtest",
+            "gcov",
+        ]
+
+        check_includes = false
+    }
+
+    test_output = "${target_out_dir}/${target_name}-output.json"
+
+    execute_action_name = "${target_name}-execute"
+    action(execute_action_name) {
+        inputs = [ "${target_out_dir}/${output_name}"]
+
+        if (unittest_launcher != "") {
+            script = unittest_launcher
+            args = [ rebase_path(inputs[0]) ]
+        } else {
+            script = inputs[0]
+            args = []
+        }
+
+        args += [
+            "--gtest_shuffle",
+            "--gtest_output=json:" + rebase_path(test_output),
+        ]
+        deps = [
+            ":${invoker.target_name}"
+        ]
+
+        outputs = [ test_output ]
+    }
+
+    coverage_action_name = "${target_name}-coverage"
+    action(coverage_action_name) {
+        script = gcovr_tool
+        output = "${target_out_dir}/${coverage_action_name}.html"
+
+        args = [
+            "--root",
+            rebase_path("//."),
+            "--filter",
+            ".*/" + get_path_info(invoker.source, "file"),
+            "--html",
+            rebase_path(output),
+            "--html-details",
+            "--html-title",
+            "GCC Code Coverage Report - " + get_path_info(invoker.source, "file"),
+            "--delete",
+        ]
+        inputs = get_target_outputs(":${execute_action_name}")
+        outputs = [ output ]
+        deps = [
+            ":${execute_action_name}"
+        ]
+        pool = "//:gcovr_pool"
+    }
+
+}

@@ -1,0 +1,113 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/actions/check-sources.gni")
+import("//gn/import/utils.gni")
+import("//gn/targets/binary.gni")
+
+install_tool("ccache") {
+    install_path = "/usr/bin/ccache"
+}
+
+#
+# Avoid issues when running multiple gcovr instances in parallel
+#
+pool("gcovr_pool") {
+  depth = 1
+}
+
+#
+# An action which does nothing but can be used to depend on the build
+# generation.
+#
+python_action("ack-gn") {
+  script = "gn/scripts/update-mtime.py"
+  output = "${root_build_dir}/gn.ack"
+  args = [
+    "-o",
+    rebase_path(output),
+    rebase_path("${root_build_dir}/build.ninja.stamp"),
+  ]
+
+  # Make sure this script gets always run
+  outputs = [
+    output,
+    "${root_build_dir}/${target_name}-non-existant",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+  deps = [
+    "//test:unittest-drivers-execute",
+    "//test:unittest-init-execute",
+    "//test:unittest-io-execute",
+  ]
+}
+
+group("checks") {
+  testonly = true
+  deps = [
+    ":check-sources-project",
+    ":gn-check",
+    ":unittests",
+  ]
+}
+
+# Build the executable for both toolchains
+group("default") {
+  deps = [
+    "//src:modular-app(//gn/toolchain/embedded)",
+    "//src:monolithic-app(//gn/toolchain/embedded)",
+  ]
+}
+
+action("gn-check") {
+  testonly = true
+  script = "/usr/bin/gn"
+  args = [
+    "check",
+    rebase_path("${root_build_dir}"),
+  ]
+  inputs = get_target_outputs(":ack-gn")
+  deps = [ ":ack-gn" ]
+  outputs = [ "${target_out_dir}/non-existant" ]
+}
+
+check_sources("check-sources-project") {
+  targets = [
+    "//src:*(//gn/toolchain/embedded)",
+    "//test:*(//gn/toolchain/host)",
+  ]
+
+  deps = [
+    ":ack-gn",
+
+    # Ninja will only know the dependencies once the related targets
+    # have been built. Maybe clang-scan-deps is still the better option.
+    ":default",
+    ":unittests",
+  ]
+}
+

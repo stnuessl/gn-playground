@@ -1,0 +1,143 @@
+---
+AlignOperands: DontAlign
+AlignEscapedNewlines: LeftWithLastLine
+AllowAllArgumentsOnNextLine: false
+AlignTrailingComments:
+  Kind: Always
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseExpressionOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AllowShortNamespacesOnASingleLine: false
+BinPackArguments: false
+BinPackLongBracedList: false
+BinPackParameters: OnePerLine
+AlignConsecutiveAssignments:
+  AcrossEmptyLines: false
+AlignArrayOfStructures: Right
+AlignConsecutiveBitFields:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+  AlignFunctionDeclarations: false
+  AlignFunctionPointers: false
+SpacesInSquareBrackets: false
+Standard: Auto
+TabWidth: 4
+UseTab: Never
+SpacesInParensOptions:
+  ExceptDoubleParentheses: false
+SpaceBeforeInheritanceColon: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCaseColon: false
+SpaceBeforeAssignmentOperators: true
+SpaceAfterTemplateKeyword: true
+SpaceAfterOperatorKeyword: true
+SpaceAfterLogicalNot: false
+SpaceAfterCStyleCast: true
+SortIncludes:
+  Enabled: true
+  IgnoreCase: true
+SortUsingDeclarations: LexicographicNumeric
+ReflowComments: Always
+RemoveEmptyLinesInUnwrappedLines: false
+RemoveParentheses: ReturnStatement
+RemoveSemicolon: true
+SeparateDefinitionBlocks: Always
+SkipMacroDefinitionBody: false
+ReferenceAlignment: Right
+QualifierAlignment: Left
+PointerAlignment: Right
+MaxEmptyLinesToKeep: 1
+MainIncludeChar: Quote
+LineEnding: LF
+LambdaBodyIndentation: Signature
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+InsertTrailingCommas: Wrapped
+InsertNewlineAtEOF: true
+InsertBraces: false
+IndentWrappedFunctionNames: false
+IndentWidth: 4
+IndentPPDirectives: None
+BitFieldColonSpacing: Both
+AlwaysBreakBeforeMultilineStrings: false
+AlignAfterOpenBracket: Align
+ColumnLimit: 80
+CompactNamespaces: false
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Always
+EnumTrailingComma: Insert
+FixNamespaceComments: true
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentRequiresClause: true
+IndentGotoLabels: false
+IndentExternBlock: NoIndent
+IndentExportBlock: false
+BreakTemplateDeclarations: Yes
+BreakStringLiterals: false
+BreakInheritanceList: AfterComma
+BreakFunctionDefinitionParameters: false
+BreakConstructorInitializers: BeforeColon
+BreakBinaryOperations: Never
+BreakBeforeTernaryOperators: false
+BreakBeforeTemplateCloser: false
+BreakBeforeInlineASMColon: Always
+BreakBeforeConceptDeclarations: Allowed
+BreakBeforeBinaryOperators: NonAssignment
+BreakArrays: false
+BreakAfterAttributes: Always
+BreakAdjacentStringLiterals: false
+BracedInitializerIndentWidth: 4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterObjCDeclaration: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: false
+  AfterFunctionDeclarationName: false
+  AfterFunctionDefinitionName: false
+  AfterIfMacros: false
+  AfterNot: false
+  AfterOverloadedOperator: false
+  AfterPlacementOperator: true
+  AfterRequiresInClause: false
+  AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+SpaceBeforeJsonColon: true
+SpaceAroundPointerQualifiers: Before
+ShortNamespaceLines: 1
+RequiresExpressionIndentation: OuterScope
+RequiresClausePosition: OwnLine
+RemoveBracesLLVM: false
+NamespaceIndentation: None

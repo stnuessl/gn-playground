@@ -1,0 +1,11 @@
+
+
+compilation_database = {{ compile_commands }}
+
+rule clang-scan-deps
+    command = {{ clang-scan-deps }} ${args}
+    description = SCAN ${compilation_database}
+
+build {{ build_output }}: clang-scan-deps
+
+

@@ -1,0 +1,154 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025-2026  Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/python/env-file.gni")
+import("//gn/python/vars.gni")
+
+# An action to invoke python scripts.
+template("python") {
+  assert(defined(invoker.script), "'script' must be specified")
+
+  _vars = [ "testonly" ]
+  forward_variables_from(invoker, _vars)
+
+  _use_uv = false
+  _uv_args = [ "--no-config" ]
+
+  if (defined(invoker.working_directory)) {
+    _working_director = invoker.working_directory
+
+    _use_uv = true
+    _uv_args += [
+      "--directory",
+      rebase_path(_working_directory, root_build_dir),
+    ]
+  } else {
+    _working_directory = root_build_dir
+  }
+
+  _uv_args += [
+    "run",
+    "--no-project",
+  ]
+
+  if (defined(invoker.installation)) {
+    _use_uv = true
+    _uv_args = [
+      "--python",
+      invoker.installation,
+    ]
+  }
+
+  _deps = []
+  _inputs = []
+
+  if (defined(invoker.env)) {
+    _use_uv = true
+
+    _env_file_action = "$target_name-env-file"
+    _env_file_path = "$target_gen_dir/$target_name.env"
+
+    env_file(_env_file_action) {
+      forward_variables_from(invoker, [ "env" ])
+      outputs = [ _env_file_path ]
+    }
+
+    _uv_args += [
+      "--env-file",
+      rebase_path(_env_file_path, root_build_dir),
+    ]
+
+    _deps += [ ":$_env_file_action" ]
+    _inputs += [ _env_file_path ]
+  }
+
+  _requirements = []
+
+  if (defined(invoker.requirements)) {
+    _use_uv = true
+    _requirements = invoker.requirements
+
+    foreach(_item, _requirements) {
+      _uv_args += [
+        "--with",
+        _item,
+      ]
+    }
+  }
+
+  # Invoke simple scripts directly through python to bypass uv's runtime
+  # overhead. For thousands of python build actions, this can significantly
+  # reduce overall build time.
+  if (_use_uv) {
+    _script = uv_tool
+    _args = _uv_args
+  } else {
+    _script = python_tool
+    _args = [ "-S" ]
+  }
+
+  _args += [ rebase_path(invoker.script, _working_directory) ]
+  _inputs += [ invoker.script ]
+
+  if (defined(invoker.args)) {
+    _args += invoker.args
+  }
+
+  action(target_name) {
+    _ignore = [
+      "args",
+      "requirements",
+      "testonly",
+    ]
+
+    forward_variables_from(invoker, "*", _ignore)
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (!defined(inputs)) {
+      inputs = []
+    }
+
+    deps += _deps
+    inputs += _inputs
+
+    if (!defined(mnemonic)) {
+      if (_use_uv) {
+        mnemonic = "UV"
+      } else {
+        mnemonic = "PYTHON"
+      }
+    }
+
+    metadata = {
+      requirements = _requirements
+      template = [ "python" ]
+    }
+
+    script = _script
+    args = _args
+  }
+}

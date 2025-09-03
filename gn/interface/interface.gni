@@ -1,0 +1,71 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2026 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software,
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE,
+#
+
+template("interface") {
+  _config_name = "$target_name-config"
+
+  _config_vars = [
+    "arflags",
+    "asmflags",
+    "cflags",
+    "cflags_c",
+    "cflags_cc",
+    "defines",
+    "include_dirs",
+  ]
+
+  config(_config_name) {
+    forward_variables_from(invoker, _config_vars)
+
+    visibility = [ ":$target_name" ]
+  }
+
+  source_set(target_name) {
+    _ignore = _config_vars
+    forward_variables_from(invoker, "*", _ignore)
+
+    metadata = {
+      template = [ "interface" ]
+      component = [ invoker.component ]
+    }
+
+    if (!defined(public_configs)) {
+      public_configs = []
+    }
+
+    public_configs += [ ":$_config_name" ]
+
+    if (defined(sources)) {
+      _patterns = [
+        "*.h",
+        "*.hh",
+        "*.hpp",
+        "*.hxx",
+      ]
+
+      _headers = filter_include(sources, _patterns)
+      assert(sources == _headers, "'sources' must only contain header files")
+    }
+  }
+}

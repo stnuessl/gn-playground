@@ -1,0 +1,253 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/echo/echo.gni")
+import("//gn/python/python.gni")
+
+declare_args() {
+  # A program used for launching unit tests.
+  unittest_launcher = ""
+
+  # Arguments passed to the unit test launcher program.
+  unittest_launcher_args = []
+
+  # Random seed to enforce a specific test case execution order.
+  unittest_random_seed = ""
+}
+
+_prefix = "unittest"
+
+template("unittest") {
+  assert(!defined(invoker.check_includes),
+         "'check_includes' must be unspecified")
+  assert(!defined(invoker.cflags), "'cflags' must be unspecified")
+  assert(!defined(invoker.cflags_c), "'cflags_c' must be unspecified")
+  assert(!defined(invoker.cflags_cc), "'cflags_cc' must be unspecified")
+  assert(!defined(invoker.defines), "'defines' must be unspecified")
+  assert(!defined(invoker.libs), "'libs' must be unspecified")
+  assert(!defined(invoker.testonly), "'testonly' must be unspecified")
+  assert(defined(invoker.source), "'source' must be defined")
+
+  executable_target_name = "$_prefix-$target_name"
+  testonly = true
+
+  _patterns = [
+    "*.c",
+    "*.cc",
+    "*.cpp",
+    "*.cxx",
+  ]
+
+  executable(executable_target_name) {
+    check_includes = false
+
+    _ignore = [
+      "branch_coverage",
+      "extra_inputs",
+      "line_coverage",
+      "source",
+      "sources",
+      "tests",
+    ]
+
+    forward_variables_from(invoker, "*", _ignore)
+
+    sources = [ invoker.source ]
+    if (defined(invoker.tests)) {
+      sources += invoker.tests
+    }
+
+    if (defined(invoker.extra_inputs)) {
+      sources += invoker.extra_inputs
+    }
+
+    defines = [ "GN_UNITTEST" ]
+    cflags = [
+      "-Og",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-fno-omit-frame-pointer",
+      "-ftrapv",
+      "-g2",
+      "-pedantic",
+    ]
+    cflags_c = [
+      "-std=c11",
+      "-fprofile-arcs",
+      "-ftest-coverage",
+    ]
+    cflags_cc = [ "-std=c++17" ]
+    libs = [
+      "gtest",
+      "gcov",
+    ]
+    ldflags = [ "-coverage" ]
+
+    metadata = {
+      template = [ "unittest" ]
+      validates = [ rebase_path(invoker.source, root_build_dir) ]
+    }
+  }
+
+  _out_dir = get_path_info(invoker.source, "out_dir")
+  _path = "$_out_dir/_${executable_target_name}_"
+
+  _result = filter_include([ invoker.source ], _patterns)
+
+  if (_result != []) {
+    _src_name = get_path_info(invoker.source, "name")
+    _path += "/$_src_name.gcda"
+  }
+
+  execute_target_name = "$_prefix-execute-$target_name"
+  action(execute_target_name) {
+    if (is_linux || is_mac) {
+      _extension = ""
+    } else {
+      _extension = ".exe"
+    }
+
+    inputs = [ "$target_out_dir/$executable_target_name$_extension" ]
+    deps = [ ":$executable_target_name" ]
+    mnemonic = "RUN"
+
+    outputs = [
+      "$target_gen_dir/$target_name-output.json",
+      _path,
+    ]
+
+    if (unittest_launcher != "") {
+      script = unittest_launcher
+
+      args = unittest_launcher_args + [ rebase_path(inputs[0], root_build_dir) ]
+    } else {
+      script = inputs[0]
+      args = []
+    }
+
+    args += [
+      "--gtest_shuffle",
+      "--gtest_output=json:" + rebase_path(outputs[0], root_build_dir),
+    ]
+
+    if (unittest_random_seed != "") {
+      args += [ "--gtest_random_seed=$unittest_random_seed" ]
+    }
+  }
+
+  coverage_target_name = "$_prefix-coverage-$target_name"
+  python(coverage_target_name) {
+    deps = [ ":$execute_target_name" ]
+    inputs = get_target_outputs(deps[0])
+    outputs = [ "$target_gen_dir/$coverage_target_name.html" ]
+    mnemonic = "COVERAGE"
+    requirements = [ "gcovr" ]
+
+    if (defined(invoker.line_coverage)) {
+      _line_coverage = invoker.line_coverage
+    } else {
+      _line_coverage = "100"
+    }
+
+    if (defined(invoker.branch_coverage)) {
+      _branch_coverage = invoker.branch_coverage
+    } else {
+      _branch_coverage = "100"
+    }
+
+    module = "gcovr"
+    args = [
+      "--gcov-executable",
+      "llvm-cov gcov",
+      "--root",
+      rebase_path("//.", root_build_dir),
+      "-j",
+      "1",
+      "--fail-under-line",
+      _line_coverage,
+      "--fail-under-branch",
+      _branch_coverage,
+      "--html",
+      rebase_path(outputs[0], root_build_dir),
+      "--html-details",
+      "--html-title",
+      "GCC Code Coverage Report - " + get_path_info(invoker.source, "file"),
+      "--delete",
+      rebase_path(_path, root_build_dir),
+    ]
+  }
+
+  _echo_target_name = "$_prefix-info-$target_name"
+  echo(_echo_target_name) {
+    testonly = true
+
+    deps = [
+      ":$coverage_target_name",
+      ":$execute_target_name",
+    ]
+    _coverage_inputs = get_target_outputs(deps[0])
+    _execute_inputs = get_target_outputs(deps[1])
+
+    mnemonic = "INFO"
+    inputs = _execute_inputs + _coverage_inputs
+    args = [
+      "Test Report     : " + rebase_path(_execute_inputs[0]),
+      "Coverage Report : " + rebase_path(_coverage_inputs[0]),
+    ]
+  }
+
+  _group_name = "$_prefix-file-$target_name"
+  group(_group_name) {
+    deps = [ ":$_echo_target_name" ]
+  }
+
+  if (defined(invoker.tests)) {
+    foreach(source, filter_include(invoker.tests, _patterns)) {
+      _file_name = get_path_info(source, "name")
+      _group_name = "$_prefix-file-$_file_name"
+
+      group(_group_name) {
+        deps = [ ":$_echo_target_name" ]
+      }
+    }
+  }
+}
+
+# A convenience template to easily define a group for unit test targets.
+template("unittest_group") {
+  assert(defined(invoker.deps), "'deps' must be specified")
+
+  group(target_name) {
+    _ignore = [ "deps" ]
+
+    forward_variables_from(invoker, "*", _ignore)
+
+    testonly = true
+    deps = []
+    foreach(_dep, invoker.deps) {
+      deps += [ string_replace(_dep, ":", ":$_prefix-file-", 1) ]
+    }
+  }
+}

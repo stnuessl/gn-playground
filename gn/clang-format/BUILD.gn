@@ -1,0 +1,93 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2026 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/ninja/ninja.gni")
+import("//gn/python/python.gni")
+import("//gn/sources/sources.gni")
+import("//gn/vars.gni")
+
+python("make-build") {
+  testonly = true
+  deps = [ metadata_target ]
+  inputs = metadata_outputs
+  outputs = [ "$target_gen_dir/build.ninja" ]
+
+  requirements = [
+    "ninja",
+    "xxhash",
+  ]
+  env = [ "PYTHONPATH=" + rebase_path("//gn/python/packages", root_build_dir) ]
+
+  script = "//gn/clang-format/make-build.py"
+  args = [
+    "--build-directory",
+    rebase_path(target_gen_dir, root_build_dir),
+    "-o",
+    rebase_path(outputs[0], root_build_dir),
+    "--metadata",
+    rebase_path(metadata_outputs[0], root_build_dir),
+    "--clang-format",
+    rebase_path(clang_format_tool),
+  ]
+}
+
+ninja("check") {
+  testonly = true
+  deps = [ ":make-build" ]
+  inputs = get_target_outputs(deps[0])
+
+  build_dir = target_gen_dir
+}
+
+sources("sources") {
+  testonly = true
+  outputs = [ "$target_gen_dir/sources.json" ]
+
+  include_sources = [
+    "*.c",
+    "*.cc",
+    "*.cpp",
+    "*.cxx",
+    "*.h",
+    "*.hpp",
+    "*.hxx",
+  ]
+}
+
+python("clang-format") {
+  testonly = true
+  deps = [ ":sources" ]
+  inputs = get_target_outputs(":sources")
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+  mnemonic = "CLANG-FORMAT"
+  pool = "//:console"
+
+  script = "//gn/clang-format/invoke-clang-format.py"
+  args = [
+    "--clang-format",
+    clang_format_tool,
+    "--sources",
+    rebase_path(inputs[0], root_build_dir),
+  ]
+}

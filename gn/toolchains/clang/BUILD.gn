@@ -1,0 +1,115 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/ccache/ccache.gni")
+import("//gn/memmaps/memmaps.gni")
+import("//gn/python/python.gni")
+import("//gn/toolchains/clang/vars.gni")
+import("//gn/toolchains/templates/clang-toolchain.gni")
+
+declare_args() {
+  asm_launcher_clang = ccache_invocation
+  cc_launcher_clang = ccache_invocation
+  cxx_launcher_clang = ccache_invocation
+}
+
+# Create memory mapping header stubs
+_vfs_data = []
+
+foreach(header, memmaps) {
+  _file = get_path_info(header, "file")
+  _dir = get_path_info(header, "gen_dir")
+
+  # Place the generated stub files into a dedicated virtual file system
+  # directory to make these files easier to differentiate from regular files.
+  _target = string_replace("$_dir/$_file", root_gen_dir, clang.vfs_gen_dir)
+
+  _vfs_data += [
+    {
+      source = rebase_path(header, root_build_dir)
+      target = rebase_path(_target, root_build_dir)
+    },
+  ]
+
+  _text = []
+  _text = [
+    "/*",
+    " * Automatically generated file. Do not edit.",
+    " * Source: " + rebase_path(header),
+    " */",
+    "",
+    "#ifdef MEMMAP_ERROR",
+    "#undef MEMMAP_ERROR",
+    "#endif",
+    "",
+  ]
+
+  write_file(_target, _text, "list lines")
+}
+
+# Write the virtual filesystem configuration to disk
+write_file(clang.vfs_config_path, _vfs_data, "json")
+
+# Create the virtual filesystem
+_uv_script = "//gn/toolchains/clang/mk-vfs.py"
+_uv_args = [
+  "run",
+  rebase_path(_uv_script, root_build_dir),
+  "-o",
+  rebase_path(clang.vfs_path, root_build_dir),
+  rebase_path(clang.vfs_config_path, root_build_dir),
+]
+_uv_deps = [
+  _uv_script,
+  clang.vfs_config_path,
+]
+
+exec_script(uv_tool, _uv_args, "", _uv_deps)
+
+clang_toolchain("clang") {
+  if (asm_launcher_clang != "") {
+    asm_launcher = asm_launcher_clang
+  }
+
+  if (cc_launcher_clang != "") {
+    cc_launcher = cc_launcher_clang
+  }
+
+  if (cxx_launcher_clang != "") {
+    cxx_launcher = cxx_launcher_clang
+  }
+
+  prepend_cflags = [
+    # "--target=i386-pc-windows-gnu",
+    "-ivfsoverlay",
+    rebase_path(clang.vfs_path, root_build_dir),
+  ]
+
+  asm = "clang"
+  cc = "clang"
+  cxx = "clang++"
+  ar = "llvm-ar rcs"
+  ld = "clang++"
+  cp = "cp -f"
+}

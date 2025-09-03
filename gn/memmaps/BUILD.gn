@@ -1,0 +1,48 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/memmaps/memmaps.gni")
+import("//gn/python/python.gni")
+import("//gn/vars.gni")
+
+python("check") {
+  _memmaps_file = "$target_gen_dir/memmaps.txt"
+
+  write_file(_memmaps_file, rebase_path(memmaps, root_build_dir), "list lines")
+
+  testonly = true
+  deps = [ dependencies_target ]
+  inputs = dependencies_outputs
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+
+  mnemonic = "CHECK"
+  env = [ "PYTHONPATH=" + rebase_path("//gn/python/packages", root_build_dir) ]
+  script = "//gn/memmaps/check-memmaps.py"
+  args = [
+    "--dependencies",
+    rebase_path(dependencies_outputs[0]),
+    "--memmaps",
+    rebase_path(_memmaps_file, root_build_dir),
+  ]
+}

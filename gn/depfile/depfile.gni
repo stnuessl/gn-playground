@@ -1,0 +1,101 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2026 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/python/python.gni")
+import("//gn/vars.gni")
+
+template("depfile") {
+  python(target_name) {
+    _vars = [
+      "testonly",
+      "visibility",
+    ]
+    _ignore = _vars + [
+                "exclude",
+                "include",
+                "labels",
+              ]
+
+    forward_variables_from(invoker, "*", _ignore)
+    forward_variables_from(invoker, _vars)
+
+    testonly = true
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (!defined(inputs)) {
+      inputs = []
+    }
+
+    env =
+        [ "PYTHONPATH=" + rebase_path("//gn/python/packages", root_build_dir) ]
+    deps += [ description_target ]
+    inputs += description_outputs
+
+    if (!defined(depfile)) {
+      depfile = "$target_gen_dir/$target_name.d"
+    }
+
+    if (!defined(outputs)) {
+      outputs = [ depfile ]
+    }
+
+    script = "//gn/depfile/make-depfile.py"
+    args = [
+      "--description",
+      rebase_path(description_outputs[0], root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+
+    if (outputs[0] != depfile) {
+      args += [
+        "-o",
+        rebase_path(outputs[0], root_build_dir),
+      ]
+    }
+
+    if (defined(invoker.include)) {
+      args += [ "--include" ]
+      args += invoker.include
+    }
+
+    if (defined(invoker.exclude)) {
+      args += [ "--exclude" ]
+      args += invoker.exclude
+    }
+
+    args += [ "--" ]
+
+    if (invoker.labels == [ "//*" ]) {
+      args += [ "//*" ]
+    } else {
+      foreach(_item, invoker.labels) {
+        args += [ get_label_info(_item, "label_no_toolchain") ]
+      }
+    }
+  }
+}

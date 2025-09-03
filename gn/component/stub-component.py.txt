@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2026 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import argparse
+import os
+import sys
+
+import clang.cindex
+
+
+class Visitor:
+    def __init__(self, compilation_database, sources):
+        dirname = os.path.dirname(compilation_database)
+
+        self.compilation_database = (
+            clang.cindex.CompilationDatabase.fromDirectory(dirname)
+        )
+        self.sources = sources
+        self.index = clang.cindex.Index.create()
+        self.extern_fn_decls = {}
+        self.fn_defs = {}
+
+    def _get_translation_unit(self, source):
+        entries = self.compilation_database.getCompileCommands(source)
+        if not entries or len(entries) == 0:
+            message = f'missing compile command for source "{source}"'
+            raise RuntimeError(message)
+
+        args = list(entries[0].arguments)
+
+        return self.index.parse(
+            None,
+            args=args,
+        )
+
+    def _visit_fn_decl(self, cursor):
+        if cursor.storage_class == clang.cindex.StorageClass.STATIC:
+            return
+
+        if cursor.is_definition():
+            self.fn_defs[cursor.spelling] = cursor
+            return
+
+        self.extern_fn_decls[cursor.spelling] = cursor
+
+
+    def _visit(self, cursor):
+        if cursor.kind == clang.cindex.CursorKind.FUNCTION_DECL:
+            self._visit_fn_decl(cursor)
+
+        for child in cursor.get_children():
+            self._visit(child)
+
+    def run(self):
+        for source in self.sources:
+            tu = self._get_translation_unit(source)
+            self._visit(tu.cursor)
+
+        import json
+
+        print(json.dumps(list(self.extern_fn_decls.keys())))
+        print(json.dumps(list(self.fn_defs.keys())))
+        undefined = {
+            k: v for k, v in self.extern_fn_decls.items()
+            if k not in self.fn_defs
+        }
+        print(json.dumps(list(undefined.keys()), indent=4))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--compilation-database')
+    parser.add_argument('sources', nargs='+')
+    parser.add_argument('-o')
+
+    args = parser.parse_args()
+
+    print(args.sources)
+    print(args.compilation_database)
+
+    visitor = Visitor(args.compilation_database, args.sources)
+    visitor.run()
+
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

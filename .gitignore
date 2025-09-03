@@ -1,0 +1,25 @@
+#
+# .gitignore
+#
+
+# Common build directories
+build/
+out/
+_build/
+
+# ninja
+.ninja_deps
+.ninja_log
+
+# caches
+.cache/
+
+# python cache
+__pycache__/
+
+# Platform-dependent, hard to maintain... no thanks.
+*.bat
+*.cmd
+*.ps1
+*.sh
+

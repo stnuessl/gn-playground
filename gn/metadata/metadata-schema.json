@@ -1,0 +1,77 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$defs": {
+        "label": {
+            "type": "string",
+            "pattern": "^//[^:()]*(:[^:()]+)?$"
+        }
+    },
+    "type": "array",
+    "items": {
+        "type": "object",
+        "required": [
+            "target",
+            "type",
+            "template",
+            "testonly"
+        ],
+        "additionalProperties": false,
+        "properties": {
+            "target": {
+                "$ref": "#/$defs/label"
+            },
+            "component": {
+                "type": "string",
+                "minLength": 1
+            },
+            "source": {
+                "type": "string",
+                "minLength": 1
+            },
+            "template": {
+                "enum": [
+                    "binary",
+                    "component",
+                    "interface",
+                    "unittest"
+                ]
+            },
+            "testonly": {
+                "type": "boolean"
+            },
+            "type": {
+                "enum": [
+                    "executable",
+                    "source_set",
+                    "static_library",
+                    "dynamic_library"
+                ]
+            },
+            "validates": {
+                "type": "string"
+            }
+        },
+        "if": {
+            "properties": {
+                "template": {
+                    "const": "unittest"
+                }
+            }
+        },
+        "then": {
+            "required": [
+                "validates"
+            ],
+            "properties": {
+                "validates": {
+                    "$ref": "#/$defs/label"
+                }
+            }
+        },
+        "else": {
+            "required": [
+                "component"
+            ]
+        }
+    }
+}

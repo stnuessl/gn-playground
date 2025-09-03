@@ -1,0 +1,76 @@
+# Exclude directories that are used and managed by tools.
+exclude = [
+    ".cache",
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "_build",
+    "_out",
+    "build",
+    "out",
+    "venv",
+]
+
+cache-dir = ".cache/ruff"
+output-format = "concise"
+line-length = 80
+indent-width = 4
+
+[format]
+quote-style = "single"
+line-ending = "auto"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[lint]
+# Enable experimental checks
+preview = true
+
+# Enable checks from the following categories
+select = [
+    "A",
+    "ARG",
+    "B",
+    "C",
+    "C4",
+    "C90",
+    "CPY",
+    "E4",
+    "E7",
+    "E9",
+    "EM",
+    "F",
+    "FBT",
+    "FIX",
+    "FLY",
+    "I",
+    "N",
+    "NPY",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "RUF",
+    "SIM",
+    "SLF",
+    "TD",
+    "TID",
+]
+
+#
+# Disabled checks / Exceptions:
+#   * B006 Do not use mutable data structures for argument defaults
+#   * Q000 Single quotes found but double quotes preferred
+#   * SIM115 Use a context manager for opening files
+#   * PLW1514 `open` in text mode without explicit `encoding` argument
+#   * UP015 Unnecessary mode argument
+#
+ignore = [
+    "B006",
+    "Q000",
+    "SIM115",
+    "PLW1514",
+    "UP015",
+]
+

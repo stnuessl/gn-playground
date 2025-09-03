@@ -1,0 +1,92 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/python/python.gni")
+import("//gn/vars.gni")
+
+python("metadata") {
+  testonly = true
+  deps = [ description_target ]
+  inputs = description_outputs
+  outputs = metadata_outputs
+  mnemonic = "METADATA"
+
+  script = "//gn/metadata/extract-metadata.py"
+  args = [
+    "-o",
+    rebase_path(outputs[0], root_build_dir),
+    rebase_path(inputs[0], root_build_dir),
+  ]
+}
+
+group("check") {
+  testonly = true
+  deps = [
+    ":metadata-available-check",
+    ":metadata-schema-check",
+  ]
+}
+
+# Ensure that there is metadata available for each source file used in the
+# software build.
+python("metadata-available-check") {
+  testonly = true
+  deps = [
+    dependencies_target,
+    metadata_target,
+  ]
+  inputs = metadata_outputs + dependencies_outputs
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+  mnemonic = "CHECK"
+
+  env = [ "PYTHONPATH=" + rebase_path("//gn/python/packages", root_build_dir) ]
+  script = "//gn/metadata/check-metadata-available.py"
+  args = [
+    "--dependencies",
+    rebase_path(dependencies_outputs[0], root_build_dir),
+    "--metadata",
+    rebase_path(metadata_outputs[0], root_build_dir),
+  ]
+}
+
+# Ensure that the available metadata conforms to a specific schema.
+python("metadata-schema-check") {
+  _scheme_file = "//gn/metadata/metadata-schema.json"
+
+  testonly = true
+  deps = [ metadata_target ]
+  inputs = metadata_outputs + [ _scheme_file ]
+  outputs = [ "$target_gen_dir/$target_name.non-existant" ]
+
+  mnemonic = "CHECK"
+
+  requirements = [ "jsonschema" ]
+  script = "//gn/metadata/check-metadata-schema.py"
+  args = [
+    "--metadata",
+    rebase_path(metadata_outputs[0], root_build_dir),
+    "--schema",
+    rebase_path(_scheme_file, root_build_dir),
+  ]
+}

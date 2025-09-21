@@ -23,8 +23,8 @@
 #
 
 import argparse
-import fnmatch
 import json
+import fnmatch
 import os
 import sys
 
@@ -34,58 +34,69 @@ def main():
         '--description',
         help='',
         required=True,
-        type=lambda x: json.load(open(x, 'r'))
+        type=str
     )
     parser.add_argument(
-        '--deps',
+        '--stub-config',
         help='',
         required=True,
-        type=lambda x: json.load(open(x, 'r'))
+        type=str
     )
     parser.add_argument(
-        '--skip',
+        '--memmap-glob',
         help='',
-        default=[],
-        nargs='*',
         required=False,
+        nargs='+',
+        default=['**/*MemMap*.h'],
         type=str
     )
     parser.add_argument(
         '--root',
-        help='The project\'s root directory.',
-        required=False,
-        default=os.getcwd(),
-        type=str
-    )
-    parser.add_argument(
-        '-o',
         help='',
-        metavar='file',
-        default=sys.stdout,
-        type=lambda x: open(x, 'r')
+        required=True,
+        type=str
     )
 
     args = parser.parse_args()
 
-    lookup = { x['source'] for x in args.description }
+    with open(args.description, 'r') as f:
+        description = json.load(f)
 
-    # Compactify everything into a set to remove duplicates
-    prerequisites = {
-        os.path.abspath(x)
-        for dep in args.deps
-        for x in dep['prerequisites']
+    with open(args.stub_config, 'r') as f:
+        stub_config = json.load(f)
+
+    memmaps = set()
+    target_types = {
+        'executable',
+        'source_set',
+        'static_library',
+        'dynamic_library',
     }
 
-    exit_code = 0
-
-    for item in prerequisites:
-        if any(fnmatch.fnmatch(item, x) for x in args.skip):
+    for item in description.values():
+        if item['type'] not in target_types:
             continue
 
-        if item not in lookup:
-            exit_code = 1
+        for source in item.get('sources', []):
+            if not any(fnmatch.fnmatch(source, x) for x in args.memmap_glob):
+                continue
+
+            path = os.path.join(args.root, source.removeprefix('//'))
+            path = os.path.normpath(path)
+
+            memmaps.add(path)
+
+    known = set(x['source'] for x in stub_config)
+    missing = [x for x in memmaps if x not in known]
+
+    if len(missing) == 0:
+        exit_code = 0
+    else:
+        exit_code = 1
+
+        for item in missing:
             print(
-                f'error: \'{item}\' not listed in any target sources',
+                f'error: \'{item}\' not listed as a MemMap file',
                 file=sys.stderr
             )
 

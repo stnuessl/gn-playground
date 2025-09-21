@@ -22,9 +22,7 @@
 # SOFTWARE.
 #
 
-declare_args() {
-  uv_tool = "/usr/bin/uv"
-}
+import("//gn/toolchains/tools.gni")
 
 template("python_action") {
   action(target_name) {

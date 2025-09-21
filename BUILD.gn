@@ -22,33 +22,26 @@
 # SOFTWARE.
 #
 
+# FIXME: structure outputs with scopes
+# FIXME: provide a list and singular value for convenience in outputs.gni
+
+import("//gn/outputs.gni")
 import("//gn/actions/check-sources.gni")
 import("//gn/actions/install.gni")
-import("//gn/util/install-tool.gni")
-import("//gn/targets/binary.gni")
 
-install_tool("ccache") {
-  install_path = "/usr/bin/ccache"
-}
-
-#
-# An action which does nothing but can be used to depend on the build
-# generation.
-#
-python_action("ack-gn") {
-  script = "gn/scripts/update-mtime.py"
-  output = "${root_build_dir}/gn.ack"
-  args = [
-    "-o",
-    rebase_path(output),
-    rebase_path("${root_build_dir}/build.ninja.stamp"),
+if (current_toolchain == default_toolchain) {
+  ninja_args = [
+    "-C",
+    rebase_path("//gn/toolchains"),
+    "-f",
+    "install.ninja",
   ]
 
-  # Make sure this script gets always run
-  outputs = [
-    output,
-    "${root_build_dir}/${target_name}-non-existant",
-  ]
+  file_deps = [ "//gn/toolchains/install.ninja" ]
+
+  print("Tool installation. This might take a while...")
+  output = exec_script(ninja_tool, ninja_args, "trim string", file_deps)
+  print(output)
 }
 
 group("unittest") {
@@ -69,37 +62,46 @@ group("unittest-coverage") {
   ]
 }
 
-group("checks") {
+group("check-all") {
   testonly = true
   deps = [
     ":check-sources-project",
     ":gn-check",
     ":unittest-coverage",
+    "//gn:check-compile-commands",
+    "//gn:description",
+    "//gn:check-memmaps",
   ]
 }
 
-install("install-binaries") {
-  dest = "${root_build_dir}/bin"
-  deps = [
-    "//src:modular-app(//gn/toolchain/embedded)",
-    "//src:monolithic-app(//gn/toolchain/embedded)",
-  ]
+copy("copy-binaries") {
+  deps = [ "//src:app(//gn/toolchains/embedded)" ]
+
+  sources = []
+  foreach(target, deps) {
+    dir = get_label_info(target, "target_out_dir")
+    name = get_label_info(target, "name")
+
+    sources += [ "${dir}/${name}" ]
+  }
+
+  outputs = [ "${root_build_dir}/bin/{{source_name_part}}" ]
 }
 
 # Build the executable for both toolchains
 group("default") {
-  deps = [ ":install-binaries" ]
+  deps = [ ":copy-binaries" ]
 }
 
 action("gn-check") {
   testonly = true
-  script = "/usr/bin/gn"
+  script = gn_tool
   args = [
     "check",
     rebase_path("${root_build_dir}"),
   ]
-  inputs = get_target_outputs(":ack-gn")
-  deps = [ ":ack-gn" ]
+  inputs = ack_outputs
+  deps = [ "//gn:ack" ]
   outputs = [ "${target_out_dir}/non-existant" ]
 }
 
@@ -108,19 +110,22 @@ action("gn-check") {
 group("compile-commands") {
   testonly = true
   deps = [
-    "//src:monolithic-app(//gn/toolchain/host)",
-    "//src:modular-app(//gn/toolchain/host)",
+    ":unittest",
+    "//src:app(//gn/toolchains/host)",
   ]
 }
 
+# FIXME: switch to clang-scan-deps, remove :default and :unittest deps
 check_sources("check-sources-project") {
   targets = [
-    "//src:*(//gn/toolchain/embedded)",
-    "//test:*(//gn/toolchain/host)",
+    "//src:*(//gn/toolchains/embedded)",
+    "//test:*(//gn/toolchains/host)",
   ]
 
+  inputs = ack_outputs
+
   deps = [
-    ":ack-gn",
+    "//gn:ack",
 
     # Ninja will only know the dependencies once the related targets
     # have been built. Maybe clang-scan-deps is still the better option.
@@ -129,7 +134,33 @@ check_sources("check-sources-project") {
   ]
 
   skip = [
+    # System headers
     "/usr/include/*",
     "/usr/lib/*",
+
+    # Stubs
+    rebase_path("${root_build_dir}/**/drivers.h"),
+    rebase_path("${root_build_dir}/**/io.h"),
   ]
 }
+
+
+
+#input = "$root_build_dir/stub-config.json"
+#args = []
+#args = [
+#    "run",
+#    rebase_path("//gn/scripts/mkvfs.py"),
+#    "--config",
+#    rebase_path(input),
+#]
+#
+#file_deps = []
+##file_deps = [
+##    "//gn/scripts/mkvfs.py",
+##    "$root_build_dir/stub-config.json",
+##]
+#
+#print(exec_script(uv_tool, args, "trim string", file_deps))
+
+

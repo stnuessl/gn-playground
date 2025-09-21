@@ -45,7 +45,7 @@ template("install") {
     # Make sure to construct a unique name
     action_name = rebase_path(source, "//")
     action_name = string_replace(action_name, "/", "_")
-    action_name = "install-${action_name}"
+    action_name = "${action_name}-"
 
     group_deps += [ ":${action_name}" ]
 

@@ -1,0 +1,122 @@
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Steffen Nuessle
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+import("//gn/actions/check-compile-commands.gni")
+import("//gn/actions/description.gni")
+import("//gn/actions/python-action.gni")
+import("//gn/data/stubs.gni")
+import("//gn/outputs.gni")
+
+stub_config = []
+
+foreach(header, stubs.header_files) {
+  dir = get_path_info(header, "gen_dir")
+  file = get_path_info(header, "file")
+
+  stub = "${dir}/${file}"
+
+  stub_config += [
+    {
+      source = rebase_path(header)
+      stub = rebase_path(stub)
+    },
+  ]
+
+  text = []
+  text = [
+    "/*",
+    " * Automatically generated file. Do not edit.",
+    " * Source: " + rebase_path(header),
+    " */",
+    "",
+    "#ifdef MEMMAP_ERROR",
+    "#undef MEMMAP_ERROR",
+    "#endif",
+    "",
+  ]
+
+  write_file(stub, text, "list lines")
+}
+
+stubs_config_file = "${root_build_dir}/stubs.json"
+write_file(stubs_config_file, stub_config, "json")
+
+print(exec_script(uv_tool,
+                  [
+                    "run",
+                    rebase_path("//gn/scripts/mkvfs.py"),
+                    "--config",
+                    rebase_path(stubs_config_file),
+                    "-o",
+                    rebase_path(clang_vfs),
+                  ],
+                  "trim string",
+                  [ stubs_config_file ]))
+
+python_action("check-memmaps") {
+    script = "//gn/scripts/check-memmaps.py"
+    args = [
+        "--description",
+        rebase_path(description_outputs[0]),
+        "--stub-config",
+        rebase_path(stubs_config_file),
+        "--root",
+        rebase_path("//"),
+    ]
+
+    inputs = description_outputs
+    deps = [
+        ":description"
+    ]
+    outputs = [ "${target_out_dir}/${target_name}.non-existant" ]
+    testonly = true
+}
+
+#
+# An action which does nothing but can be used to depend on the build
+# generation.
+#
+python_action("ack") {
+  script = "//gn/scripts/update-mtime.py"
+  args = [
+    "-o",
+    rebase_path(ack_outputs[0]),
+    rebase_path("${root_build_dir}/build.ninja.stamp"),
+  ]
+
+  # Make sure this script gets always run
+  outputs = [
+    ack_outputs[0],
+    "${ack_outputs[0]}-non-existant",
+  ]
+}
+
+description("description") {
+  output = description_outputs[0]
+}
+
+check_compile_commands("check-compile-commands") {
+  inputs = description_outputs
+  deps = [ ":description" ]
+}

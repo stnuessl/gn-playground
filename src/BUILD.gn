@@ -22,57 +22,11 @@
 # SOFTWARE.
 #
 
-import("//gn/targets/binary.gni")
-import("//gn/targets/component.gni")
+import("//gn/outputs.gni")
+import("//gn/target-decls/binary.gni")
+import("//gn/target-decls/component.gni")
 
-config("monolithic-app-config") {
-  if (current_toolchain == "host") {
-    defines = [ "MONOLITHIC_APP_HOST" ]
-  } else {
-    defines = [ "MONOLITHIC_APP" ]
-  }
-  cflags = [
-    "-pedantic",
-    "-Wall",
-    "-Wextra",
-    "-Werror",
-    "-O2",
-    "-fdata-sections",
-    "-ffunction-sections",
-  ]
-  ldflags = [
-    "-O2",
-    "-fdata-sections",
-    "-ffunction-sections",
-  ]
-}
-
-binary("monolithic-app") {
-  sources = [
-    "core/core.c",
-    "core/core.h",
-    "drivers/drivers.c",
-    "drivers/drivers.h",
-    "init/init.S",
-    "init/init.h",
-    "io/io.c",
-    "io/io.h",
-    "main.c",
-    "utils/utils.c",
-    "utils/utils.h",
-  ]
-  include_dirs = [
-    "core",
-    "drivers",
-    "init",
-    "io",
-    "utils",
-  ]
-  configs = [ ":monolithic-app-config" ]
-  tags = "Mimas"
-}
-
-group("modular-app-deps") {
+group("app-deps") {
   deps = [
     ":core",
     ":drivers",
@@ -82,7 +36,7 @@ group("modular-app-deps") {
   ]
 }
 
-config("modular-app-config") {
+config("app-config") {
   defines = [ "MODULAR_APP" ]
   cflags = [
     "-pedantic",
@@ -93,6 +47,12 @@ config("modular-app-config") {
     "-fdata-sections",
     "-ffunction-sections",
   ]
+  if (current_toolchain == default_toolchain) {
+      cflags += [
+        "-vfsoverlay",
+        rebase_path(clang_vfs),
+      ]
+  }
   ldflags = [
     "-O2",
     "-fdata-sections",
@@ -100,7 +60,7 @@ config("modular-app-config") {
   ]
 }
 
-binary("modular-app") {
+binary("app") {
   sources = [ "main.c" ]
   deps = [
     ":core",
@@ -109,7 +69,7 @@ binary("modular-app") {
     ":io",
     ":utils",
   ]
-  configs = [ ":modular-app-config" ]
+  configs = [ ":app-config" ]
   tags = "Hyperion"
 }
 
@@ -118,7 +78,7 @@ component("core") {
     "core/core.c",
     "core/core.h",
   ]
-  configs = [ ":modular-app-config" ]
+  configs = [ ":app-config" ]
   tags = "Titan"
 }
 
@@ -127,7 +87,7 @@ component("drivers") {
     "drivers/drivers.c",
     "drivers/drivers.h",
   ]
-  configs = [ ":modular-app-config" ]
+  configs = [ ":app-config" ]
   tags = "Rhea"
 }
 
@@ -136,7 +96,7 @@ component("init") {
     "init/init.S",
     "init/init.h",
   ]
-  configs = [ ":modular-app-config" ]
+  configs = [ ":app-config" ]
   tags = "Dione"
 }
 
@@ -145,7 +105,7 @@ component("io") {
     "io/io.c",
     "io/io.h",
   ]
-  configs = [ ":modular-app-config" ]
+  configs = [ ":app-config" ]
   tags = "Tethys"
 }
 
@@ -154,6 +114,6 @@ component("utils") {
     "utils/utils.c",
     "utils/utils.h",
   ]
-  configs = [ ":modular-app-config" ]
+  configs = [ ":app-config" ]
   tags = "Enceladus"
 }

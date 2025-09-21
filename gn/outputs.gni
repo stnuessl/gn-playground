@@ -22,14 +22,11 @@
 # SOFTWARE.
 #
 
-template("component") {
-  source_set(target_name) {
-    ignore = [ "tags" ]
-    forward_variables_from(invoker, "*", ignore)
+# Always use a list to represent outputs to make it easier for other
+# targets to use them.
 
-    metadata = {
-      type = [ "component" ]
-      tags = [ invoker.tags ]
-    }
-  }
-}
+ack_outputs = [ "${root_build_dir}/gn.ack" ]
+description_outputs = ["${root_build_dir}/description.json"]
+
+# Ever only used as a single target
+clang_vfs = "${root_build_dir}/gen/clang-vfs.json"

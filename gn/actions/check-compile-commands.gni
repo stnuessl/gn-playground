@@ -22,25 +22,37 @@
 # SOFTWARE.
 #
 
-import("//gn/target-decls/unittest.gni")
+import("//gn/actions/python-action.gni")
 
-unittest("unittest-init") {
-  source = "//src/init/init.S"
-  tests = [ "//test/test-init.cpp" ]
-  line_coverage = "0"
-  branch_coverage = "0"
-}
+template("check_compile_commands") {
+  python_action(target_name) {
+    assert(defined(invoker.inputs), "'inputs' must be defined")
+    assert(defined(invoker.deps), "'deps' must be defined")
 
-unittest("unittest-io") {
-  source = "//src/io/io.c"
-  tests = [ "//test/test-io.cpp" ]
-  line_coverage = "0"
-  branch_coverage = "0"
-}
+    ignore = [
+      "script",
+      "args",
+      "outputs",
+      "exclude",
+    ]
 
-unittest("unittest-drivers") {
-  source = "//src/drivers/drivers.c"
-  tests = [ "//test/test-drivers.cpp" ]
-  line_coverage = "0"
-  branch_coverage = "0"
+    forward_variables_from(invoker, "*", ignore)
+
+    script = "//gn/scripts/check-compile-commands.py"
+    args = [
+      "--compile-commands",
+      rebase_path("${root_build_dir}/compile_commands.json"),
+      "--gn-description",
+      rebase_path(inputs[0]),
+      "--root",
+      rebase_path("//"),
+    ]
+
+    if (defined(invoker.exclude)) {
+        args += [ "--exclude" ] + invoker.exclude
+    }
+
+    outputs = [ "${target_out_dir}/${target_name}.non-existant" ]
+    testonly = true
+  }
 }

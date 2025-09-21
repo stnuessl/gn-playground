@@ -23,7 +23,10 @@
 #
 
 template("install_tool") {
-  if (path_exists(invoker.install_path)) {
+  if (current_toolchain != default_toolchain) {
+    not_needed(invoker, "*")
+    not_needed("*")
+  } else if (!path_exists(invoker.install_path)) {
     not_needed(invoker, "*", [ "install_path" ])
     not_needed("*")
   } else {

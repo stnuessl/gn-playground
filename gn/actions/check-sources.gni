@@ -25,16 +25,11 @@
 import("//gn/actions/capture-output.gni")
 import("//gn/actions/python-action.gni")
 
-declare_args() {
-  ninja_tool = "/usr/bin/ninja"
-  gn_tool = "/usr/bin/gn"
-}
-
 template("metadata") {
   #
   # Use gn to generate a description of the requested targets.
   #
-  assert(defined(invoker.targets), "'target' not defined")
+  assert(defined(invoker.targets), "'targets' not defined")
   assert(defined(invoker.deps), "'deps' not defined")
 
   target_deps = []
@@ -55,7 +50,10 @@ template("metadata") {
     target_inputs += [ capture_output ]
 
     capture_output(capture_name) {
-      variables = [ "deps" ]
+      variables = [
+        "deps",
+        "inputs",
+      ]
 
       forward_variables_from(invoker, variables)
       testonly = true
@@ -132,11 +130,13 @@ template("check_sources") {
   metadata_target = "${target_name}-metadata"
 
   metadata(metadata_target) {
-    forward_variables_from(invoker,
-                           [
-                             "targets",
-                             "deps",
-                           ])
+    vars = [
+      "targets",
+      "deps",
+      "inputs",
+    ]
+
+    forward_variables_from(invoker, vars)
     testonly = true
 
     output = "${target_out_dir}/intermediate/${target_name}.json"

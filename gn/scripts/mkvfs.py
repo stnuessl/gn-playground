@@ -22,25 +22,60 @@
 # SOFTWARE.
 #
 
-import("//gn/target-decls/unittest.gni")
+import argparse
+import glob
+import json
+import sys
+import os
 
-unittest("unittest-init") {
-  source = "//src/init/init.S"
-  tests = [ "//test/test-init.cpp" ]
-  line_coverage = "0"
-  branch_coverage = "0"
-}
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--config'
+    )
+    parser.add_argument(
+        '-o',
+        help='',
+        required=False,
+        default=sys.stdout,
+        type=lambda x: open(x, 'w')
+    )
 
-unittest("unittest-io") {
-  source = "//src/io/io.c"
-  tests = [ "//test/test-io.cpp" ]
-  line_coverage = "0"
-  branch_coverage = "0"
-}
+    args = parser.parse_args()
 
-unittest("unittest-drivers") {
-  source = "//src/drivers/drivers.c"
-  tests = [ "//test/test-drivers.cpp" ]
-  line_coverage = "0"
-  branch_coverage = "0"
-}
+    with open(args.config, 'r') as f:
+        config = json.load(f)
+
+    vfs = {
+        'version': 0,
+        'roots': [],
+    }
+
+    roots = {}
+
+    for item in config:
+        dirname, filename = os.path.split(item['source'])
+
+        entry = {
+            'name': filename,
+            'type': 'file',
+            'external-contents': item['stub'],
+        }
+
+        if dirname in roots:
+            roots[dirname]['content'].append(entry)
+        else:
+            roots[dirname] = {
+                'name' : dirname,
+                'type' : 'directory',
+                'contents' : [entry],
+            }
+
+    for value in roots.values():
+        vfs['roots'].append(value)
+
+    print(json.dumps(vfs, indent=4), file=args.o)
+
+
+if __name__ == '__main__':
+    main()

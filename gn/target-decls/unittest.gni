@@ -22,8 +22,10 @@
 # SOFTWARE.
 #
 
+import("//gn/outputs.gni")
+import("//gn/toolchains/tools.gni")
+
 declare_args() {
-  gcovr_tool = "/usr/bin/gcovr"
   unittest_launcher = ""
 }
 
@@ -65,6 +67,8 @@ template("unittest") {
       "-fno-omit-frame-pointer",
       "-Og",
       "-g2",
+      "-vfsoverlay",
+      rebase_path(clang_vfs),
     ]
 
     cflags_c = [
@@ -74,6 +78,9 @@ template("unittest") {
     libs = [
       "gtest",
       "gcov",
+    ]
+    ldflags = [
+      "-coverage"
     ]
 
     check_includes = false
@@ -130,6 +137,8 @@ template("unittest") {
     object_out_dir += "/_${output_name}_"
 
     args = [
+      "--gcov-executable",
+      "llvm-cov gcov",
       "--root",
       rebase_path("//."),
       "-j",

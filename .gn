@@ -8,7 +8,7 @@ export_compile_commands = [
 
 exec_script_allowlist = [
   "//BUILD.gn",
-  "//gn/import/utils.gni",
+  "//gn/BUILD.gn",
 ]
 
 no_stamp_files = true

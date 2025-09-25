@@ -25,73 +25,8 @@
 import("//gn/actions/check-compile-commands.gni")
 import("//gn/actions/description.gni")
 import("//gn/actions/python-action.gni")
-import("//gn/data/stubs.gni")
 import("//gn/outputs.gni")
 
-stub_config = []
-
-foreach(header, stubs.header_files) {
-  dir = get_path_info(header, "gen_dir")
-  file = get_path_info(header, "file")
-
-  stub = "${dir}/${file}"
-
-  stub_config += [
-    {
-      source = rebase_path(header)
-      stub = rebase_path(stub)
-    },
-  ]
-
-  text = []
-  text = [
-    "/*",
-    " * Automatically generated file. Do not edit.",
-    " * Source: " + rebase_path(header),
-    " */",
-    "",
-    "#ifdef MEMMAP_ERROR",
-    "#undef MEMMAP_ERROR",
-    "#endif",
-    "",
-  ]
-
-  write_file(stub, text, "list lines")
-}
-
-stubs_config_file = "${root_build_dir}/stubs.json"
-write_file(stubs_config_file, stub_config, "json")
-
-print(exec_script(uv_tool,
-                  [
-                    "run",
-                    rebase_path("//gn/scripts/mkvfs.py"),
-                    "--config",
-                    rebase_path(stubs_config_file),
-                    "-o",
-                    rebase_path(clang_vfs),
-                  ],
-                  "trim string",
-                  [ stubs_config_file ]))
-
-python_action("check-memmaps") {
-    script = "//gn/scripts/check-memmaps.py"
-    args = [
-        "--description",
-        rebase_path(description_outputs[0]),
-        "--stub-config",
-        rebase_path(stubs_config_file),
-        "--root",
-        rebase_path("//"),
-    ]
-
-    inputs = description_outputs
-    deps = [
-        ":description"
-    ]
-    outputs = [ "${target_out_dir}/${target_name}.non-existant" ]
-    testonly = true
-}
 
 #
 # An action which does nothing but can be used to depend on the build

@@ -22,3 +22,24 @@
 # SOFTWARE.
 #
 
+template("clang_tidy") {
+  action(target_name) {
+    assert(defined(invoker.sources), "'sources' must be specified")
+
+    ignore = [
+      "script",
+      "testonly",
+    ]
+
+    forward_variables_from(invoker, "*", ignore)
+
+    script = clang_tidy_tool
+    args = [
+             "-p",
+             rebase_path(root_build_dir),
+           ] + rebase_path(sources)
+
+    outputs = [ "$target_out_dir/$target_name.non-existant" ]
+    testonly = true
+  }
+}

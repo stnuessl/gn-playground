@@ -22,14 +22,32 @@
 # SOFTWARE.
 #
 
-set_default_toolchain("//gn/toolchains/clang")
+import("//gn/toolchains/gcc-toolchain.gni")
 
 declare_args() {
-  clang_tidy_tool = "/usr/bin/clang-tidy"
-  gcovr_tool = "/usr/bin/gcovr"
-  ninja_tool = "/usr/bin/ninja"
-  gn_tool = "/usr/bin/gn"
-  uv_tool = "/usr/bin/uv"
-  ccache_tool = "/usr/bin/ccache"
+  asm_launcher_gcc = ""
+  cc_launcher_gcc = ""
+  cxx_launcher_gcc = ""
+}
+
+gcc_toolchain("gcc") {
+  if (asm_launcher_gcc != "") {
+    asm_launcher = asm_launcher_gcc
+  }
+
+  if (cc_launcher_gcc != "") {
+    cc_launcher = cc_launcher_gcc
+  }
+
+  if (cxx_launcher_gcc != "") {
+    cxx_launcher = cxx_launcher_gcc
+  }
+
+  asm = "gcc"
+  cc = "gcc"
+  cxx = "g++"
+  ar = "ar rcs"
+  ld = "gcc"
+  cp = "cp -f"
 }
 

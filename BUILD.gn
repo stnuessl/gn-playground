@@ -62,6 +62,16 @@ group("unittest-coverage") {
   ]
 }
 
+group("clang-tidy") {
+  testonly = true
+  deps = [
+    "//src:clang-tidy-core",
+    "//src:clang-tidy-io",
+    "//src:clang-tidy-drivers",
+    "//src:clang-tidy-utils",
+  ]
+}
+
 group("check-all") {
   testonly = true
   deps = [
@@ -70,27 +80,13 @@ group("check-all") {
     ":unittest-coverage",
     "//gn:check-compile-commands",
     "//gn:description",
-    "//gn:check-memmaps",
+#    "//gn:check-memmaps",
   ]
-}
-
-copy("copy-binaries") {
-  deps = [ "//src:app(//gn/toolchains/embedded)" ]
-
-  sources = []
-  foreach(target, deps) {
-    dir = get_label_info(target, "target_out_dir")
-    name = get_label_info(target, "name")
-
-    sources += [ "${dir}/${name}" ]
-  }
-
-  outputs = [ "${root_build_dir}/bin/{{source_name_part}}" ]
 }
 
 # Build the executable for both toolchains
 group("default") {
-  deps = [ ":copy-binaries" ]
+    deps = [ "//src:app(//gn/toolchains/gcc)" ]
 }
 
 action("gn-check") {
@@ -111,15 +107,15 @@ group("compile-commands") {
   testonly = true
   deps = [
     ":unittest",
-    "//src:app(//gn/toolchains/host)",
+    "//src:app(//gn/toolchains/clang)",
   ]
 }
 
 # FIXME: switch to clang-scan-deps, remove :default and :unittest deps
 check_sources("check-sources-project") {
   targets = [
-    "//src:*(//gn/toolchains/embedded)",
-    "//test:*(//gn/toolchains/host)",
+    "//src:*(//gn/toolchains/gcc)",
+    "//test:*",
   ]
 
   inputs = ack_outputs

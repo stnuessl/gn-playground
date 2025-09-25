@@ -17,3 +17,13 @@ Features
 #. component-based build example
 #. compile_commands.json suiteable for use by a language server
 
+GN Style Guide
+==============
+
+Apply the official
+`gn style guide <https://gn.googlesource.com/gn/+/main/docs/style_guide.md`_.
+
+FIXME
+=====
+
+Enable uv cache in CI build

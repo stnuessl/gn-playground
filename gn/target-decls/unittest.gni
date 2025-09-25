@@ -22,9 +22,6 @@
 # SOFTWARE.
 #
 
-import("//gn/outputs.gni")
-import("//gn/toolchains/tools.gni")
-
 declare_args() {
   unittest_launcher = ""
 }
@@ -67,8 +64,6 @@ template("unittest") {
       "-fno-omit-frame-pointer",
       "-Og",
       "-g2",
-      "-vfsoverlay",
-      rebase_path(clang_vfs),
     ]
 
     cflags_c = [

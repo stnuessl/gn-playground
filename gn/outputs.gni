@@ -28,5 +28,3 @@
 ack_outputs = [ "${root_build_dir}/gn.ack" ]
 description_outputs = ["${root_build_dir}/description.json"]
 
-# Ever only used as a single target
-clang_vfs = "${root_build_dir}/gen/clang-vfs.json"

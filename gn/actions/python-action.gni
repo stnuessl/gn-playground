@@ -22,8 +22,6 @@
 # SOFTWARE.
 #
 
-import("//gn/toolchains/tools.gni")
-
 template("python_action") {
   action(target_name) {
     ignore = [

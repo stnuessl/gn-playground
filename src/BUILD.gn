@@ -22,7 +22,6 @@
 # SOFTWARE.
 #
 
-import("//gn/outputs.gni")
 import("//gn/target-decls/binary.gni")
 import("//gn/target-decls/component.gni")
 
@@ -47,12 +46,7 @@ config("app-config") {
     "-fdata-sections",
     "-ffunction-sections",
   ]
-  if (current_toolchain == default_toolchain) {
-      cflags += [
-        "-vfsoverlay",
-        rebase_path(clang_vfs),
-      ]
-  }
+
   ldflags = [
     "-O2",
     "-fdata-sections",

@@ -22,6 +22,8 @@
 # SOFTWARE.
 #
 
+import("//gn/target-decls/clang-tidy.gni")
+
 template("component") {
   source_set(target_name) {
     ignore = [ "tags" ]
@@ -35,19 +37,26 @@ template("component") {
 
       entry = {
         source = rebase_path(item)
-        stub = rebase_path("${dir}/${name}")
+        stub = rebase_path("$dir/$name")
       }
 
       entries += [ entry ]
     }
 
     if (current_toolchain == default_toolchain) {
-        write_file("${target_gen_dir}/${target_name}.json", entries, "json")
+      write_file("$target_gen_dir/$target_name.json", entries, "json")
     }
 
     metadata = {
       type = [ "component" ]
       tags = [ invoker.tags ]
     }
+  }
+
+  _clang_tidy_target_name = "clang-tidy-$target_name"
+
+  # TODO: We require a clang-tidy target for each C source file
+  clang_tidy(_clang_tidy_target_name) {
+    sources = invoker.sources
   }
 }

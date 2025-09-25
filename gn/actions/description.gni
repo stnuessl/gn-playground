@@ -24,7 +24,6 @@
 
 import("//gn/outputs.gni")
 import("//gn/actions/capture-output.gni")
-import("//gn/toolchains/tools.gni")
 
 template("description") {
     capture_output(target_name) {

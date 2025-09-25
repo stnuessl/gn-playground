@@ -22,14 +22,6 @@
 # SOFTWARE.
 #
 
-set_default_toolchain("//gn/toolchains/clang")
-
-declare_args() {
-  clang_tidy_tool = "/usr/bin/clang-tidy"
-  gcovr_tool = "/usr/bin/gcovr"
-  ninja_tool = "/usr/bin/ninja"
-  gn_tool = "/usr/bin/gn"
-  uv_tool = "/usr/bin/uv"
-  ccache_tool = "/usr/bin/ccache"
+clang = {
+    memmaps = []
 }
-

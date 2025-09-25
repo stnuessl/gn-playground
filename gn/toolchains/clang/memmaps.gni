@@ -22,20 +22,11 @@
 # SOFTWARE.
 #
 
-template("install_tool") {
-  if (current_toolchain != default_toolchain) {
-    not_needed(invoker, "*")
-    not_needed("*")
-  } else if (!path_exists(invoker.install_path)) {
-    not_needed(invoker, "*", [ "install_path" ])
-    not_needed("*")
-  } else {
-    args = [
-      "-c",
-      "print('info: installing ${target_name}...')",
-    ]
 
-    message = exec_script("/usr/bin/python", args, "trim string")
-    print(message)
-  }
+clang = {
+header_files = [
+    # FIXME: replace as this will break the build
+    #"//src/io/io.h",
+    #"//src/drivers/drivers.h",
+]
 }

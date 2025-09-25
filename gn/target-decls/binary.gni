@@ -38,5 +38,10 @@ template("binary") {
       type = [ "executable" ]
       tags = [ invoker.tags ]
     }
+
+    if (current_toolchain != default_toolchain) {
+        output_dir = "$root_build_dir/bin"
+        output_extension = "elf"
+    }
   }
 }

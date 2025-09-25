@@ -5,3 +5,5 @@
 build/
 .cache/
 __pycache__/
+.ninja_log
+.ninja_deps

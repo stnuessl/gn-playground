@@ -23,59 +23,43 @@
 #
 
 import argparse
-import glob
 import json
 import sys
-import os
+import fnmatch
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--config'
+        'compile_commands',
+        help='',
+        type=lambda x: json.load(open(x, 'r'))
     )
     parser.add_argument(
         '-o',
-        help='',
         required=False,
         default=sys.stdout,
         type=lambda x: open(x, 'w')
     )
+    parser.add_argument(
+        '--exclude',
+        help='',
+        nargs='*',
+        default=[],
+        type=str
+    )
 
     args = parser.parse_args()
 
-    with open(args.config, 'r') as f:
-        config = json.load(f)
+    sources = [
+        item['file']
+        for item in args.compile_commands
+        if not any(fnmatch.fnmatch(item['file'], x) for x in args.exclude)
+    ]
 
-    vfs = {
-        'version': 0,
-        'roots': [],
-    }
+    print('\n'.join(sources), file=args.o)
 
-    roots = {}
-
-    for item in config:
-        dirname, filename = os.path.split(item['source'])
-
-        entry = {
-            'name': filename,
-            'type': 'file',
-            'external-contents': item['stub'],
-        }
-
-        if dirname in roots:
-            roots[dirname]['content'].append(entry)
-        else:
-            roots[dirname] = {
-                'name' : dirname,
-                'type' : 'directory',
-                'contents' : [entry],
-            }
-
-    for value in roots.values():
-        vfs['roots'].append(value)
-
-    print(json.dumps(vfs, indent=4), file=args.o)
-
+    sys.exit(0)
 
 if __name__ == '__main__':
     main()

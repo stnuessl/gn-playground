@@ -1,7 +1,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2025 Steffen Nuessle
+# Copyright (c) 2026  Steffen Nuessle
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,77 +22,17 @@
 # SOFTWARE.
 #
 
-import("//gn/binary/binary.gni")
+import("//.cache/conan/vars.gni")
 import("//gn/component/component.gni")
 
-config("app-config") {
-  defines = [ "MODULAR_APP" ]
-  cflags = [
-    "-pedantic",
-    "-Wall",
-    "-Wextra",
-    "-Werror",
-    "-O2",
-    "-fdata-sections",
-    "-ffunction-sections",
-  ]
-
-  ldflags = [
-    "-O2",
-    "-fdata-sections",
-    "-ffunction-sections",
-  ]
+config("config") {
+  include_dirs = zlib.include_dirs
+  lib_dirs = zlib.lib_dirs
+  libs = zlib.libs
+  visibility = [ ":zlib" ]
 }
 
-binary("app") {
-  sources = [ "main.c" ]
-  deps = [
-    ":core",
-    ":drivers",
-    ":init",
-    ":io",
-    ":utils",
-    "//gn/conan/zlib",
-  ]
-  configs = [ ":app-config" ]
-}
-
-component("core") {
-  sources = [
-    "core/core.c",
-    "core/core.h",
-  ]
-  configs = [ ":app-config" ]
-}
-
-component("drivers") {
-  sources = [
-    "drivers/drivers.c",
-    "drivers/drivers.h",
-  ]
-  configs = [ ":app-config" ]
-}
-
-component("init") {
-  sources = [
-    "init/init.S",
-    "init/init.h",
-  ]
-  configs = [ ":app-config" ]
-}
-
-component("io") {
-  sources = [
-    "io/io.c",
-    "io/io.h",
-  ]
-  configs = [ ":app-config" ]
-}
-
-component("utils") {
-  sources = [
-    "utils/utils.c",
-    "utils/utils.h",
-  ]
-  configs = [ ":app-config" ]
+component("zlib") {
+  sources = zlib.sources
+  public_configs = [ ":config" ]
 }

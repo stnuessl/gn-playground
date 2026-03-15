@@ -33,9 +33,11 @@ services:
       - GITHUB_RUN_ID
       - GITHUB_SHA
       - SOURCE_DATE_EPOCH
+      - CONAN_HOME=/workspace/.conan2
       - UV_CACHE_DIR=/workspace/.uv-cache
       - UV_TOOL_DIR=/workspace/.uv-tools
     volumes:
       - "${PWD}:/workspace/gn-playground"
+      - "${HOME}/.conan2:/workspace/.conan2"
       - "${HOME}/.cache/uv:/workspace/.uv-cache"
       - "${HOME}/.local/share/uv/tools:/workspace/.uv-tools"

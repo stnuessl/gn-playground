@@ -18,6 +18,11 @@ void io(void)
 
 void utils(void)
 {}
+
+const char *zlibVersion(void)
+{
+    return "";
+}
 }
 
 TEST(main, case01)

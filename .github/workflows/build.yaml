@@ -39,8 +39,15 @@ jobs:
       - name: Prepare filesystem
         run: |
           mkdir -p \
+            "${HOME}/.conan2" \
             "${HOME}/.cache/uv" \
             "${HOME}/.local/share/uv/tools"
+      - name: Install conan packages
+        run: |
+          USER_ID="$(id -u)" GROUP_ID="$(id -g)" docker compose \
+            -f docker/docker-compose.yaml \
+            run --rm ${{ matrix.docker_image }} \
+            ninja -C gn/toolchains -f install.ninja ../../.cache/conan/vars.gni
       - name: Configure build system
         run: |
           USER_ID="$(id -u)" GROUP_ID="$(id -g)" docker compose \

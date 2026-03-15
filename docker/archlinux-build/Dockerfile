@@ -26,7 +26,6 @@ RUN pacman -Syu --noconfirm \
     llvm \
     ninja \
     python \
-    ruff \
     uv \
 && pacman -Scc --noconfirm \
 && useradd \

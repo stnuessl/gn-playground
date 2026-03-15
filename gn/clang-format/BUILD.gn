@@ -49,6 +49,8 @@ python("make-build") {
     rebase_path(metadata_outputs[0], root_build_dir),
     "--clang-format",
     rebase_path(clang_format_tool),
+    "--exclude",
+    "*/.conan2/*",
   ]
 }
 
@@ -73,6 +75,7 @@ sources("sources") {
     "*.hpp",
     "*.hxx",
   ]
+  exclude_sources = [ "*/.conan2/*" ]
 }
 
 python("clang-format") {

@@ -3,6 +3,8 @@
  * None. That’s a hardware problem.
  */
 
+#include <zlib.h>
+
 #include "core/core.h"
 #include "drivers/drivers.h"
 #include "init/init.h"
@@ -23,6 +25,8 @@ int main(int argc, char *argv[])
     drivers();
     utils();
     io();
+
+    (void) zlibVersion();
 
     return 0;
 }

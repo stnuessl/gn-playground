@@ -30,7 +30,11 @@ if (!is_ci_env && current_toolchain == default_toolchain) {
     "install.ninja",
   ]
 
-  file_deps = [ "//gn/toolchains/install.ninja" ]
+  file_deps = [
+    "//gn/conan/conanfile.py",
+    "//gn/conan/profile",
+    "//gn/toolchains/install.ninja",
+  ]
 
   print("Tool installation. This might take a while...")
   output = exec_script(ninja_tool, ninja_args, "trim string", file_deps)
